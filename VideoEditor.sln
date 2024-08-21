@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35209.166
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "VideoEditor", "VideoEditor.pyproj", "{C26DA469-C1C7-4FBC-B7E7-C5DA26330FAA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C26DA469-C1C7-4FBC-B7E7-C5DA26330FAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C26DA469-C1C7-4FBC-B7E7-C5DA26330FAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5689885E-38E2-40F7-8C69-6EBACBB05653}
+	EndGlobalSection
+EndGlobal

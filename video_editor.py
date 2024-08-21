@@ -1,18 +1,22 @@
-from moviepy.editor import AudioFileClip, VideoFileClip, concatenate_videoclips, concatenate_audioclips
+from moviepy.editor import AudioFileClip, VideoFileClip, CompositeAudioClip, concatenate_videoclips, concatenate_audioclips
 from os import mkdir, remove
-from os.path import isfile, exists
+from os.path import isfile, exists, realpath
 import string
 import random
 import filetype
- 
+
+file_path = realpath(__file__)
+file_path = file_path[:file_path.rfind("\\") + 1]
+
+
 
 class VideoEditor():
     def __init__(self):
-        if not exists("input_temp"):
-            mkdir("input_temp")
+        if not exists(file_path + "input_temp"):
+            mkdir(file_path + "input_temp")
 
-        if not exists("output_temp"):
-            mkdir("output_temp")
+        if not exists(file_path + "output_temp"):
+            mkdir(file_path + "output_temp")
 
 
     def get_random_path(self, dir_name: str = "", file_ext: str = "") -> str:
@@ -48,9 +52,9 @@ class VideoEditor():
 
         concat_clip = concatenate_videoclips(clips, method = "compose") #Объеденяем клипы воедино
 
-        output_name = self.get_random_path(dir_name = "output_temp", file_ext = ".mp4") #Генерируем имя файла для временного размещения
+        output_name = self.get_random_path(dir_name = file_path + "output_temp", file_ext = ".mp4") #Генерируем имя файла для временного размещения
 
-        concat_clip.write_videofile("output_temp\\" + output_name, fps = fps) #Рендерим видеофайл
+        concat_clip.write_videofile(file_path + "output_temp\\" + output_name, fps = fps) #Рендерим видеофайл
 
         video.close()
 
@@ -72,9 +76,9 @@ class VideoEditor():
 
         concat_clip = concatenate_audioclips(clips) #Объеденяем аудиофрагменты воедино
 
-        output_name = self.get_random_path(dir_name = "output_temp", file_ext = ".wav") #Генерируем имя файла для временного размещения
+        output_name = self.get_random_path(dir_name = file_path + "output_temp", file_ext = ".wav") #Генерируем имя файла для временного размещения
 
-        concat_clip.write_audiofile("output_temp\\" + output_name, fps = fps) #Рендерим аудиофайл
+        concat_clip.write_audiofile(file_path + "output_temp\\" + output_name, fps = fps) #Рендерим аудиофайл
 
         audio.close()
 
@@ -90,28 +94,109 @@ class VideoEditor():
 
         input_name = self.get_random_path("input_temp")
 
-        with open("input_temp\\" + input_name, "wb") as f:
+        with open(file_path + "input_temp\\" + input_name, "wb") as f:
             f.write(media) #Записываем содержимое в файл
 
-        kind = filetype.guess("input_temp\\" + input_name) #Определяем видео к нам пришло или аудио
+        kind = filetype.guess(file_path + "input_temp\\" + input_name) #Определяем видео к нам пришло или аудио
 
         if "video" in kind.mime: #Если пришло видео
-            output_name = self.cut_video(video_path = "input_temp\\" + input_name, cut_list = cut_list)
+            output_name = self.cut_video(video_path = file_path + "input_temp\\" + input_name, cut_list = cut_list)
         elif "audio" in kind.mime: #Если пришло аудио
-            output_name = self.cut_audio(audio_path = "input_temp\\" + input_name, cut_list = cut_list)
+            output_name = self.cut_audio(audio_path = file_path + "input_temp\\" + input_name, cut_list = cut_list)
         else:
             raise Exception("Поддерживаются только видео и аудио")
 
-        with open("output_temp\\" + output_name, "rb") as f:
+        with open(file_path + "output_temp\\" + output_name, "rb") as f:
             output = f.read()
 
-        remove("input_temp\\" + input_name) #Удаляем временный входной файл
-        remove("output_temp\\" + output_name) #Удаляем временный выходной файл
+        remove(file_path + "input_temp\\" + input_name) #Удаляем временный входной файл
+        remove(file_path + "output_temp\\" + output_name) #Удаляем временный выходной файл
+
+        return output
+
+    
+    def merge_videos(self, videos_list: list) -> bytes:
+        '''
+        Метод для склейки видеоклипов воедино
+        Принимает список видео, представленных в виде массива байт
+        Возвращает склеенный видеоклип в виде массива байт
+        '''
+
+        clips = [] #Создаём список клипов
+        video_path_list = []
+        max_fps = 0
+
+        for binary_video in videos_list:
+            input_name = file_path + "input_temp\\" + self.get_random_path(dir_name = "input_temp")
+
+            video_path_list.append(input_name)
+
+            with open(input_name, "wb") as f:
+                f.write(binary_video) #Записываем содержимое в файл
+
+            video = VideoFileClip(input_name) #Открываем видеофайл
+            max_fps = max(max_fps, video.fps)
+
+            clips.append(video)
+
+        concat_clip = concatenate_videoclips(clips, method = "compose") #Объеденяем клипы воедино
+
+        output_name = self.get_random_path(dir_name = file_path + "output_temp", file_ext = ".mp4") #Генерируем имя файла для временного размещения
+
+        concat_clip.write_videofile(file_path + "output_temp\\" + output_name, fps = max_fps) #Рендерим видеофайл
+
+        with open(file_path + "output_temp\\" + output_name, "rb") as f:
+            output = f.read()
+
+        for i, clip in enumerate(clips):
+            clip.close()
+            remove(video_path_list[i]) #Удаляем временный входной файл
+
+        concat_clip.close()
+        remove(file_path + "output_temp\\" + output_name) #Удаляем временный выходной файл
 
         return output
 
 
+    def merge_video_and_audio(self, binary_video: bytes, binary_audio: bytes) -> bytes:
+        '''
+        Метод для совмещения видео и аудио воедино
+        Принимает бинарное видео и бинарное аудио
+        Возвращает бинарное видео
+        '''
 
+        input_video_name = file_path + "input_temp\\" + self.get_random_path("input_temp")
+        with open(input_video_name, "wb") as f:
+            f.write(binary_video) #Записываем содержимое в файл
+
+        input_audio_name = file_path + "input_temp\\" + self.get_random_path("input_temp")
+        with open(input_audio_name, "wb") as f:
+            f.write(binary_audio) #Записываем содержимое в файл
+
+        videoclip = VideoFileClip(input_video_name)
+        audioclip = AudioFileClip(input_audio_name)
+
+        new_audioclip = CompositeAudioClip([audioclip])
+        videoclip.audio = new_audioclip
+
+        output_name = self.get_random_path(dir_name = file_path + "output_temp", file_ext = ".mp4") #Генерируем имя файла для временного размещения
+
+        videoclip.write_videofile(file_path + "output_temp\\" + output_name)
+
+        with open(file_path + "output_temp\\" + output_name, "rb") as f:
+            output = f.read()
+
+        videoclip.close()
+        audioclip.close()
+
+        remove(input_video_name) #Удаляем временный входной файл
+        remove(input_audio_name) #Удаляем временный входной файл
+        remove(file_path + "output_temp\\" + output_name) #Удаляем временный выходной файл
+
+        return output
+
+
+        
 if __name__ == "__main__":
 
     ve = VideoEditor()
